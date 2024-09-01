@@ -1,0 +1,3 @@
+contrast,difficulty,estimate,lower.HPD,upper.HPD,sig
+Boring - Interesting,Easy,-0.42775074254647405,-0.4489527500598384,-0.4055746385508045,*
+Boring - Interesting,Hard,-0.5793665524167704,-0.5989265424618867,-0.5605618489521677,*

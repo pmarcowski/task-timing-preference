@@ -1,0 +1,3 @@
+Level1,Level2,difficulty,Difference,CI_low,CI_high,pd,ROPE_Percentage
+Interesting,Boring,Hard,-1.0498889097180055,-1.4379705135056495,-0.651001123068268,1,0
+Interesting,Boring,Easy,-1.0909849340417526,-1.4819865017621048,-0.6933916072545941,1,0
