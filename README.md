@@ -68,7 +68,7 @@ install.packages(c("tidyverse", "brms", "easystats", "patchwork", "glmmTMB", "si
 1. Download or clone this repository:
 
 ```
-git clone https://github.com/yourusername/temporal-task-scheduling.git
+git clone https://github.com/pmarcowski/task-timing-preference.git
 ```
 
 2. Navigate to the project directory:
@@ -111,7 +111,7 @@ Results, including figures and statistical outputs, will be saved in the `output
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Citation
 
