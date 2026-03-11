@@ -1,0 +1,195 @@
+---
+title: "Bayesian Analysis of Task Difficulty and Interest Ratings (Pilot Study)"
+author: "Przemyslaw Marcowski, PhD"
+date: "today"
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+#| code-fold: true
+
+library(tidyverse)
+library(BayesFactor)
+library(bayestestR)
+
+# Select confidence interval
+ci_level <- 0.99
+ci_pct <- sprintf("%d%%", round(ci_level * 100))
+
+set.seed(42) # for reproducibility
+
+# Prepare data for each experiment
+# source("../R/prepare_data.R") # Optional: prepares to `data/prepared/`
+```
+
+# Data Import
+
+Prepared pilot data comparing task difficulty and interest ratings between experimental and survey contexts.
+
+```{r pilot-import}
+# Read pilot data
+pilot_data <- readRDS("../data/prepared/pilot.Rds")
+
+pilot_data
+```
+
+# Descriptive Statistics
+
+Mean, standard deviation, and sample size for each rating measure across both contexts.
+
+```{r pilot-descriptives}
+# Calculate descriptive statistics
+descriptive_stats <- pilot_data %>%
+  summarize(
+    experiment_hard_mean = mean(experiment_hard, na.rm = TRUE),
+    experiment_hard_sd = sd(experiment_hard, na.rm = TRUE),
+    experiment_hard_n = sum(!is.na(experiment_hard)),
+    survey_hard_mean = mean(survey_hard, na.rm = TRUE),
+    survey_hard_sd = sd(survey_hard, na.rm = TRUE),
+    survey_hard_n = sum(!is.na(survey_hard)),
+    experiment_interesting_mean = mean(experiment_interesting, na.rm = TRUE),
+    experiment_interesting_sd = sd(experiment_interesting, na.rm = TRUE),
+    experiment_interesting_n = sum(!is.na(experiment_interesting)),
+    survey_interesting_mean = mean(survey_interesting, na.rm = TRUE),
+    survey_interesting_sd = sd(survey_interesting, na.rm = TRUE),
+    survey_interesting_n = sum(!is.na(survey_interesting))
+  ) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = c("task", "measure", "stat"),
+    names_pattern = "(.*)_(.*)_(.*)",
+    values_to = "value"
+  ) %>%
+  pivot_wider(
+    names_from = stat,
+    values_from = value
+  ) %>%
+  mutate(
+    task = str_to_title(task),
+    measure = case_when(
+      measure == "hard" ~ "Difficulty",
+      measure == "interesting" ~ "Interest",
+      TRUE ~ measure
+    )
+  )
+
+descriptive_stats
+```
+
+## Save Descriptive Statistics
+
+```{r pilot-save-descriptives}
+# Save results (Optional: saves to `output/`)
+# write_csv(descriptive_stats, "../output/pilot_descriptive_stats.csv")
+```
+
+# Bayesian Analysis
+
+Bayesian paired t-tests comparing experimental vs. survey ratings for difficulty and interest, using a medium Cauchy prior (r = 0.707) on the effect size.
+
+## Task Difficulty Ratings
+
+```{r pilot-difficulty-test}
+# Bayesian paired t-test for task difficulty ratings
+difficulty_bf <- ttestBF(
+  x = pilot_data$experiment_hard,
+  y = pilot_data$survey_hard,
+  paired = TRUE,
+  rscale = 0.707
+)
+
+difficulty_bf
+```
+
+### Posterior Samples
+
+```{r pilot-difficulty-posterior}
+# Extract posterior samples
+difficulty_posterior <- posterior(difficulty_bf, iterations = 10000)
+difficulty_effect <- difficulty_posterior[, "delta"]
+```
+
+### Summary Statistics
+
+```{r pilot-difficulty-summary}
+# Calculate summary statistics for task difficulty ratings
+difficulty_hdi <- hdi(difficulty_effect, ci = ci_level)
+difficulty_mean <- mean(difficulty_effect)
+difficulty_bf_value <- extractBF(difficulty_bf)$bf
+
+cat("Mean effect (delta):", difficulty_mean, "\n")
+cat(ci_pct, "HDI:", difficulty_hdi$CI_low, "-", difficulty_hdi$CI_high, "\n")
+cat("Bayes Factor:", difficulty_bf_value, "\n")
+```
+
+## Task Interest Ratings
+
+```{r pilot-interest-test}
+# Bayesian paired t-test for appeal ratings
+interest_bf <- ttestBF(
+  x = pilot_data$experiment_interesting,
+  y = pilot_data$survey_interesting,
+  paired = TRUE,
+  rscale = 0.707
+)
+
+interest_bf
+```
+
+### Posterior Samples
+
+```{r pilot-interest-posterior}
+# Extract posterior samples
+interest_posterior <- posterior(interest_bf, iterations = 10000)
+interest_effect <- interest_posterior[, "delta"]
+```
+
+### Summary Statistics
+
+```{r pilot-interest-summary}
+# Calculate summary statistics for appeal ratings
+interest_hdi <- hdi(interest_effect, ci = ci_level)
+interest_mean <- mean(interest_effect)
+interest_bf_value <- extractBF(interest_bf)$bf
+
+cat("Mean effect (delta):", interest_mean, "\n")
+cat(ci_pct, "HDI:", interest_hdi$CI_low, "-", interest_hdi$CI_high, "\n")
+cat("Bayes Factor:", interest_bf_value, "\n")
+```
+
+# Results Summary
+
+Posterior mean effect sizes (Cohen's *d*), 99% HDIs, and Bayes Factors for both comparisons.
+
+```{r pilot-summary}
+# Set up data for plotting
+effect_data <- data.frame(
+  Measure = rep(c("Difficulty", "Interest"), each = length(difficulty_effect)),
+  Effect = c(difficulty_effect, interest_effect)
+)
+
+# Create summary table for the Bayesian analysis
+pilot_summary <- tibble(
+  Measure = c("Difficulty", "Interest"),
+  Comparison = c("Experiment vs. Survey", "Experiment vs. Survey"),
+  Post_Mean_d = c(difficulty_mean, interest_mean),
+  HDI_low = c(difficulty_hdi$CI_low, interest_hdi$CI_low),
+  HDI_high = c(difficulty_hdi$CI_high, interest_hdi$CI_high),
+  Bayes_Factor = c(difficulty_bf_value, interest_bf_value),
+  Log_BF = c(log(difficulty_bf_value), log(interest_bf_value))
+)
+
+pilot_summary
+```
+
+## Save Results
+
+```{r pilot-save-summary}
+# Save results (Optional: saves to `output/`)
+# write_csv(pilot_summary, "../output/pilot_test_summary.csv")
+```
+
+# Session
+
+```{r session}
+sessionInfo()
+```

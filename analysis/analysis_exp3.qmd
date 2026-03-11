@@ -1,0 +1,346 @@
+---
+title: "Data Analysis for the Temporal Task Scheduling Project (Experiment 3)"
+author: "Przemyslaw Marcowski, PhD"
+date: "today"
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+#| code-fold: true
+
+library(tidyverse)
+library(brms)
+library(easystats)
+library(patchwork)
+library(see)
+
+# Select confidence interval
+ci_level <- 0.99
+emmeans::emm_options(level = ci_level)
+
+set.seed(42) # for reproducibility
+
+# Prepare data for each experiment
+# source("../R/prepare_data.R") # Optional: prepares to `data/prepared/`
+```
+
+# Data Import
+
+Prepared data from Experiment 3, where participants made binary task choices across six delay levels under conditions varying in difficulty and attractiveness.
+
+```{r exp3-import}
+# Read prepared data from Experiment 3
+exp3_task_data <- readRDS("../data/prepared/exp3.Rds")
+
+exp3_task_data
+```
+
+# Sample Characteristics
+
+```{r exp3-demographics}
+# Inspect sample characteristics
+exp3_task_data %>%
+  group_by(id) %>%
+  slice(1) %>%
+  ungroup() %>%
+  summarize(
+    n = n_distinct(id),
+    mean_age = mean(age),
+    sd_age = sd(age),
+    n_male = n_distinct(id[gender == "Male"]),
+    n_female = n_distinct(id[gender == "Female"])
+  )
+```
+
+# Empirical Choice Proportions
+
+Observed choice proportions by difficulty, attractiveness, and delay level, with 99% confidence intervals.
+
+```{r exp3-proportions}
+# Inspect empirical choice proportions
+props3 <-
+  exp3_task_data %>%
+  group_by(difficulty, attractiveness, log_t, chosen) %>%
+  count(chosen) %>%
+  ungroup() %>%
+  group_by(difficulty, attractiveness, log_t) %>%
+  mutate(
+    prop = n / sum(n),
+    ci_objs = lapply(n, function(k) prop.test(k, sum(n), conf.level = ci_level)),
+    CI_high = sapply(ci_objs, function(x) x$conf.int[2]),
+    CI_low = sapply(ci_objs, function(x) x$conf.int[1])
+  ) %>%
+  filter(chosen > 0)
+
+props3
+```
+
+# Bernoulli Model
+
+Bernoulli logit mixed model predicting task choice from difficulty, attractiveness, log-delay, and all interactions, with random intercepts by participant.
+
+## Model Specification
+
+```{r exp3-model-spec}
+# Model formula and family
+exp3_model_formula <- bf(paste0("chosen ~ difficulty*attractiveness*log_t + (1|id)"))
+exp3_model_family <- brmsfamily("bernoulli", "logit")
+exp3_model_priors <- get_prior(exp3_model_formula, data = exp3_task_data, family = exp3_model_family)
+
+exp3_model_priors
+```
+
+## Model Fitting
+
+```{r exp3-model-fit}
+# Fit Bernoulli model with logit link
+exp3_model_fit <-
+  brm(
+    exp3_model_formula,
+    data = exp3_task_data, family = exp3_model_family, prior = exp3_model_priors,
+    iter = 4000, warmup = 2000, chains = 4, cores = 4,
+    file = "../output/exp3_bernoulli_model_fit"
+  )
+```
+
+## Model Summary
+
+```{r exp3-model-summary}
+# Inspect model
+summary(exp3_model_fit, prob = ci_level)
+```
+
+## Posterior Description
+
+```{r exp3-posterior}
+# Describe posterior
+exp3_posterior_desc <- bayestestR::describe_posterior(exp3_model_fit, ci = ci_level, rope_ci = ci_level)
+
+exp3_posterior_desc
+```
+
+## Save Coefficients
+
+```{r exp3-save-coefficients}
+# Save model coefficients (Optional: saves to `output/`)
+# write_csv(exp3_posterior_desc, "../output/exp3_model_coefficients.csv")
+```
+
+# Marginal Means and Contrasts
+
+Predicted choice probabilities across the delay range and overall, with pairwise contrasts between attractiveness levels within each difficulty condition.
+
+## Marginal Means by Time
+
+```{r exp3-means-time}
+# Calculate marginal means across time
+exp3_marginal_means_time <- estimate_means(exp3_model_fit, by = c("difficulty", "attractiveness", "log_t"), length = 100, ci = ci_level, rope_ci = ci_level)
+
+exp3_marginal_means_time
+```
+
+## Estimated Marginal Means
+
+```{r exp3-emmeans}
+# Calculate marginal means and contrasts
+exp3_emmeans <- emmeans::emmeans(exp3_model_fit, pairwise ~ attractiveness | difficulty, regrid = "response", infer = TRUE, adjust = "mvt")
+exp3_marginal_means <- as.data.frame(summary(exp3_emmeans$emmeans, level = ci_level))
+
+exp3_marginal_means
+```
+
+## Save Marginal Means
+
+```{r exp3-save-means}
+# Save marginal means (Optional: saves to `output/`)
+# write_csv(exp3_marginal_means, "../output/exp3_marginal_means.csv")
+```
+
+## Pairwise Contrasts
+
+```{r exp3-contrasts}
+# Pairwise contrasts
+exp3_contrasts <- as.data.frame(summary(exp3_emmeans$contrasts), level = ci_level)
+exp3_contrasts$sig <- with(exp3_contrasts, ifelse(lower.HPD <= 0 & upper.HPD >= 0, "", "*"))
+
+exp3_contrasts
+```
+
+## Save Contrasts
+
+```{r exp3-save-contrasts}
+# Save contrasts (Optional: saves to `output/`)
+# write_csv(exp3_contrasts, "../output/exp3_pairwise_contrasts.csv")
+```
+
+# Slope Estimates
+
+Standardized delay slopes by difficulty and attractiveness, quantifying how choice probability changes with delay in each condition.
+
+```{r exp3-slopes}
+# Calculate trends for task delay across conditions
+exp3_slopes <- standardize(estimate_slopes(exp3_model_fit, trend = "log_t", by = c("difficulty", "attractiveness"), ci = ci_level, rope_ci = ci_level))
+
+exp3_slopes
+
+exp3_slopes_contrasts <- estimate_contrasts(exp3_model_fit, trend = "log_t", by = "attractiveness", ci = ci_level)
+print(exp3_slopes_contrasts)
+
+exp3_slopes_contrasts
+```
+
+## Save Slopes
+
+```{r exp3-save-slopes}
+# Save slope estimates (Optional: saves to `output/`)
+# write_csv(exp3_slopes, "../output/exp3_slope_estimates.csv")
+```
+
+# Visualization
+
+Predicted acceptance curves, marginal means, pairwise contrasts, and delay slope estimates.
+
+## Task Acceptance by Delay
+
+```{r exp3-means-time-plot}
+# Visualize means across task delay
+exp3_means_time_plot <-
+  exp3_marginal_means_time %>%
+  ggplot(aes(x = log_t, y = Median, group = difficulty, color = difficulty, fill = difficulty)) +
+  geom_line(linewidth = 0.5) +
+  geom_ribbon(aes(ymin = CI_low, ymax = CI_high), color = "transparent", alpha = 0.5) +
+  geom_hline(yintercept = 0.5, linetype = "dashed") +
+  geom_vline(xintercept = max(exp3_task_data$log_t) / 2, linetype = "dashed") +
+  labs(
+    title = "Task Acceptance by Delay",
+    x = "log(t)", y = "P(Choose)",
+    color = "Task Difficulty",
+    fill = "Task Difficulty"
+  ) +
+  coord_cartesian(
+    xlim = range(exp3_task_data$log_t),
+    ylim = c(0, 1)
+  ) +
+  scale_color_grey(start = 0.1, end = 0.4) +
+  scale_fill_grey(start = 0.1, end = 0.4) +
+  theme_modern() +
+  facet_wrap(~attractiveness, ncol = 2, scales = "free_x") +
+  theme(
+    aspect.ratio = 1,
+    legend.position = "bottom",
+    legend.justification = c(0.5, 0.5),
+    plot.title = element_text(hjust = 0.55),
+    strip.background = element_rect(color = "transparent", fill = "transparent")
+  )
+
+exp3_means_time_plot
+```
+
+## Marginal Task Acceptance
+
+```{r exp3-means-plot}
+# Visualize means across conditions
+exp3_means_plot <-
+  exp3_marginal_means %>%
+  ggplot(aes(x = difficulty, y = response, group = attractiveness, color = attractiveness)) +
+  geom_line(linewidth = 0.5) +
+  geom_point(size = 1) +
+  geom_errorbar(aes(ymin = lower.HPD, ymax = upper.HPD), width = 0.05, linewidth = 0.5) +
+  geom_hline(yintercept = 0.5, linetype = "dashed") +
+  labs(
+    title = "Marginal Task Acceptance",
+    x = "Task Difficulty", y = "P(Choose)",
+    color = "Task Appeal"
+  ) +
+  guides(color = "none") +
+  coord_cartesian(ylim = c(0, 1)) +
+  scale_color_grey() +
+  theme_modern() +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_text(hjust = 0.9),
+    strip.background = element_rect(color = "transparent", fill = "transparent")
+  )
+
+exp3_means_plot
+```
+
+## Differences in Task Acceptance
+
+```{r exp3-contrasts-plot}
+# Visualize attractiveness contrasts
+exp3_contrasts_plot <-
+  exp3_contrasts %>%
+  ggplot(aes(x = difficulty, y = estimate, fill = difficulty)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_col(color = "black", width = 0.25, linewidth = 0.5) +
+  geom_errorbar(aes(ymin = lower.HPD, ymax = upper.HPD), width = 0.1, linewidth = 0.5) +
+  labs(
+    title = "Differences in Task Acceptance",
+    x = "Task Difficulty", y = "P(Choose) Boring - Interesting",
+    fill = "Task Difficulty"
+  ) +
+  guides(fill = "none") +
+  coord_flip(ylim = c(-1, 1)) +
+  scale_fill_manual(values = c("white", "white")) +
+  theme_modern() +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_text(hjust = 1.1),
+    strip.background = element_rect(color = "transparent", fill = "transparent")
+  )
+
+exp3_contrasts_plot
+```
+
+## Effects of Task Delay on Preference
+
+```{r exp3-slopes-plot}
+# Visualize slope estimates
+exp3_slopes_plot <-
+  exp3_slopes %>%
+  ggplot(aes(x = difficulty, y = Median, color = attractiveness)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_point(position = position_dodge(width = 0.5), size = 1) +
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), position = position_dodge(width = 0.5), width = 0.2, linewidth = 0.5) +
+  coord_flip(ylim = c(-0.05, 0.05)) +
+  labs(
+    title = "Effects of Task Delay on Preference",
+    x = "Task Difficulty", y = bquote(beta),
+    color = "Task Appeal"
+  ) +
+  scale_y_continuous(labels = function(x) sprintf("%.2f", x)) +
+  guides(color = "none") +
+  scale_color_grey() +
+  scale_fill_grey() +
+  theme_modern() +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_text(hjust = 1.5)
+  )
+
+exp3_slopes_plot
+```
+
+## Combined Figure
+
+```{r exp3-figure}
+# Create and save figure 3
+fig3 <-
+  ((exp3_means_time_plot) / (exp3_slopes_plot + exp3_means_plot + exp3_contrasts_plot)) +
+    # plot_layout(guides = "collect") +
+    plot_annotation(tag_levels = "a") &
+    theme(
+      plot.title = element_text(size = 12),
+      legend.position = "bottom"
+      )
+
+print(fig3)
+
+ggsave("../output/fig3.png", fig3, width = 10, height = 8)
+```
+
+# Session
+
+```{r session}
+sessionInfo()
+```

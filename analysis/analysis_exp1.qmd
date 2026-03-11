@@ -1,0 +1,259 @@
+---
+title: "Data Analysis for the Temporal Task Scheduling Project (Experiment 1)"
+author: "Przemyslaw Marcowski, PhD"
+date: "today"
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+#| code-fold: true
+
+library(tidyverse)
+library(brms)
+library(easystats)
+library(patchwork)
+library(see)
+
+# Select confidence interval
+ci_level <- 0.99
+emmeans::emm_options(level = ci_level)
+
+set.seed(42) # for reproducibility
+
+# Prepare data for each experiment
+# source("../R/prepare_data.R") # Optional: prepares to `data/prepared/`
+```
+
+# Data Import
+
+Prepared data from Experiment 1, where participants chose between easy/boring and hard/interesting tasks under immediate and future timing conditions.
+
+```{r exp1-import}
+# Read prepared data from Experiment 1
+exp1_freq_data <- readRDS("../data/prepared/exp1.Rds")
+
+exp1_freq_data
+```
+
+# Demographics
+
+## Sample Size
+
+```{r exp1-sample-size}
+# Number of participants
+n_distinct(exp1_freq_data$id)
+```
+
+## Age Statistics
+
+```{r exp1-age}
+# Age statistics
+mean(exp1_freq_data$age)
+sd(exp1_freq_data$age)
+```
+
+## Demographics by Sex
+
+```{r exp1-demographics}
+# Demographics by sex
+exp1_freq_data %>%
+  group_by(sex) %>%
+  summarize(
+    n = n_distinct(id),
+    mean_age = mean(age),
+    sd_age = sd(age)
+  )
+```
+
+# Preference Proportions
+
+Task choice counts and proportions by timing condition.
+
+```{r exp1-proportions}
+# Calculate preference proportions
+exp1_prop_table <-
+  exp1_freq_data %>%
+  count(time, choice) %>%
+  group_by(time) %>%
+  mutate(
+    total = sum(n),
+    prop = n / total
+  ) %>%
+  arrange(time)
+
+exp1_prop_table
+```
+
+# Binomial Model
+
+Binomial logit model predicting choice counts from task type, timing condition, and their interaction.
+
+## Model Specification
+
+```{r exp1-model-spec}
+# Model formula and family
+exp1_model_formula <- bf(paste0("n | trials(total) ~ choice * time"))
+exp1_model_family <- brmsfamily("binomial", "logit")
+exp1_model_priors <- get_prior(exp1_model_formula, data = exp1_prop_table, family = exp1_model_family)
+
+exp1_model_priors
+```
+
+## Model Fitting
+
+```{r exp1-model-fit}
+# Fit a binomial model with identity link
+exp1_model_fit <-
+  brm(
+    exp1_model_formula,
+    data = exp1_prop_table, family = exp1_model_family, prior = exp1_model_priors,
+    iter = 4000, warmup = 2000, chains = 4, cores = 4,
+    file = "../output/exp1_binomial_model_fit"
+  )
+```
+
+## Model Summary
+
+```{r exp1-model-summary}
+# Inspect model
+summary(exp1_model_fit, prob = ci_level)
+```
+
+## Posterior Description
+
+```{r exp1-posterior}
+# Describe posterior
+exp1_posterior_desc <- bayestestR::describe_posterior(exp1_model_fit, ci = ci_level, rope_ci = ci_level)
+
+exp1_posterior_desc
+```
+
+## Save Coefficients
+
+```{r exp1-save-coefficients}
+# Save model coefficients (Optional: saves to `output/`)
+# write_csv(exp1_posterior_desc, "../output/exp1_model_coefficients.csv")
+```
+
+# Marginal Means and Contrasts
+
+Estimated marginal means and pairwise contrasts on the response scale, comparing choice probabilities between task types within each timing condition.
+
+## Estimated Marginal Means
+
+```{r exp1-emmeans}
+# Calculate marginal means and contrasts
+exp1_emmeans <- emmeans::emmeans(exp1_model_fit, pairwise ~ choice | time, regrid = "response", infer = TRUE, adjust = "mvt")
+exp1_marginal_means <- as.data.frame(summary(exp1_emmeans$emmeans, level = ci_level))
+
+exp1_marginal_means
+```
+
+## Save Marginal Means
+
+```{r exp1-save-means}
+# Save marginal means (Optional: saves to `output/`)
+# write_csv(exp1_marginal_means, "../output/exp1_marginal_means.csv")
+```
+
+## Pairwise Contrasts
+
+```{r exp1-contrasts}
+# Pairwise contrasts
+exp1_contrasts <- as.data.frame(summary(exp1_emmeans$contrasts, level = ci_level))
+exp1_contrasts$sig <- with(exp1_contrasts, ifelse(lower.HPD <= 0 & upper.HPD >= 0, "", "*"))
+
+exp1_contrasts
+```
+
+## Save Contrasts
+
+```{r exp1-save-contrasts}
+# Save contrasts (Optional: saves to `output/`)
+# write_csv(exp1_contrasts, "../output/exp1_pairwise_contrasts.csv")
+```
+
+# Visualization
+
+Marginal choice probabilities and pairwise differences across timing conditions.
+
+## Marginal Task Preference
+
+```{r exp1-means-plot}
+# Visualize means across conditions
+exp1_means_plot <-
+  exp1_marginal_means %>%
+  ggplot(aes(x = time, y = prob, group = choice, color = choice)) +
+  geom_point(size = 1) +
+  geom_line(linewidth = 0.5) +
+  geom_errorbar(aes(ymin = lower.HPD, ymax = upper.HPD), width = 0.1, linewidth = 0.5) +
+  geom_hline(yintercept = 0.5, linetype = "dashed") +
+  labs(
+    title = "Marginal Task Preference",
+    x = "Task Delay", y = "P(Choose)",
+    color = "Task Type"
+  ) +
+  coord_cartesian(ylim = c(0, 1)) +
+  scale_color_grey(labels = c("Easy" = "Easy and Boring", "Hard" = "Hard and Interesting")) +
+  theme_modern() +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_text(hjust = 0.9),
+    plot.margin = unit(c(0, 3, 0, 0), "lines"),
+    strip.background = element_rect(color = "transparent", fill = "transparent")
+  )
+
+exp1_means_plot
+```
+
+## Differences in Task Preference
+
+```{r exp1-contrasts-plot}
+# Visualize contrasts
+exp1_contrasts_plot <-
+  exp1_contrasts %>%
+  ggplot(aes(x = time, y = estimate, fill = time)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_col(color = "black", width = 0.25, linewidth = 0.5) +
+  geom_errorbar(aes(ymin = lower.HPD, ymax = upper.HPD), width = 0.1, linewidth = 0.5) +
+  labs(
+    title = "Differences in Task Preference",
+    x = "Task Delay", y = "P(Choose) Easy and Boring - Hard and Interesting",
+    fill = "Task Delay"
+  ) +
+  guides(fill = "none") +
+  coord_flip(ylim = c(-1, 1)) +
+  scale_fill_manual(values = c("white", "white")) +
+  theme_modern() +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_text(hjust = 1.1),
+    plot.margin = unit(c(0, 2, 0, 0), "lines"),
+    strip.background = element_rect(color = "transparent", fill = "transparent")
+  )
+
+exp1_contrasts_plot
+```
+
+## Combined Figure
+
+```{r exp1-figure}
+# Create and save figure 1
+fig1 <-
+  exp1_means_plot + exp1_contrasts_plot +
+    plot_layout(guides = "collect") +
+    plot_annotation(tag_levels = "a") &
+    theme(
+      plot.title = element_text(size = 12),
+      legend.position = "bottom"
+      )
+
+print(fig1)
+
+ggsave("../output/fig1.png", fig1, width = 10, height = 4)
+```
+
+# Session
+
+```{r session}
+sessionInfo()
+```

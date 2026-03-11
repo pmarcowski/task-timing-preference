@@ -1,0 +1,287 @@
+---
+title: "Data Analysis for the Temporal Task Scheduling Project (Experiment 2)"
+author: "Przemyslaw Marcowski, PhD"
+date: "today"
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+#| code-fold: true
+
+library(tidyverse)
+library(brms)
+library(easystats)
+library(patchwork)
+library(see)
+
+# Select confidence interval
+ci_level <- 0.99
+
+set.seed(42) # for reproducibility
+
+# Prepare data for each experiment
+# source("../R/prepare_data.R") # Optional: prepares to `data/prepared/`
+```
+
+# Data Import
+
+Prepared data from Experiment 2, where participants indicated preferred task delay across four conditions defined by crossing difficulty (easy, hard) and attractiveness (boring, interesting).
+
+```{r exp2-import}
+# Read prepared data from Experiment 2
+exp2_delay_data <- readRDS("../data/prepared/exp2.Rds")
+
+exp2_delay_data
+```
+
+# Sample Characteristics
+
+```{r exp2-demographics}
+# Inspect sample characteristics
+exp2_delay_data %>%
+  group_by(id) %>%
+  slice(1) %>%
+  ungroup() %>%
+  summarize(
+    n = n_distinct(id),
+    mean_age = mean(age),
+    sd_age = sd(age),
+    n_male = n_distinct(id[gender == "Male"]),
+    n_female = n_distinct(id[gender == "Female"])
+  )
+```
+
+# Follow-up Task Preferences
+
+Counts of preferred task types for immediate and delayed execution.
+
+```{r exp2-followup}
+# Count follow-up task preferences
+exp2_delay_data %>%
+  group_by(id) %>%
+  slice(1) %>%
+  ungroup() %>%
+  select(id, which_now, which_later) %>%
+  gather(task, pref, which_now, which_later) %>%
+  group_by(task, pref) %>%
+  count() %>%
+  ungroup() %>%
+  spread(pref, n)
+```
+
+# Gaussian Model
+
+Gaussian mixed model predicting log-transformed delay from difficulty, attractiveness, and their interaction, with random intercepts by participant.
+
+## Model Specification
+
+```{r exp2-model-spec}
+# Model formula and family
+exp2_model_formula <- bf(paste0("log_t ~ difficulty * attractiveness + (1|id)"))
+exp2_model_family <- brmsfamily("gaussian")
+exp2_model_priors <- get_prior(exp2_model_formula, data = exp2_delay_data, family = exp2_model_family)
+
+exp2_model_priors
+```
+
+## Model Fitting
+
+```{r exp2-model-fit}
+# Fit Gaussian model
+exp2_model_fit <-
+  brm(
+    exp2_model_formula,
+    data = exp2_delay_data, family = exp2_model_family, prior = exp2_model_priors,
+    iter = 4000, warmup = 2000, chains = 4, cores = 4,
+    file = paste0("../output/exp2_gaussian_model_fit")
+  )
+```
+
+## Model Summary
+
+```{r exp2-model-summary}
+# Inspect model
+summary(exp2_model_fit, prob = ci_level)
+```
+
+## Posterior Description
+
+```{r exp2-posterior}
+# Describe posterior
+exp2_posterior_desc <- describe_posterior(exp2_model_fit, ci = ci_level, rope_ci = ci_level)
+
+exp2_posterior_desc
+```
+
+## Save Coefficients
+
+```{r exp2-save-coefficients}
+# Save model coefficients (Optional: saves to `output/`)
+# write_csv(exp2_posterior_desc, "../output/exp2_model_coefficients.csv")
+```
+
+# Marginal Means
+
+Predicted log-delay by difficulty and attractiveness condition.
+
+```{r exp2-means}
+# Calculate posterior means
+exp2_marginal_means <- estimate_means(exp2_model_fit, at = c("difficulty", "attractiveness"), ci = ci_level, rope_ci = ci_level)
+
+exp2_marginal_means
+```
+
+## Save Marginal Means
+
+```{r exp2-save-means}
+# Save marginal means (Optional: saves to `output/`)
+# write_csv(exp2_marginal_means, "../output/exp2_marginal_means.csv")
+```
+
+# Contrasts
+
+Pairwise differences between factor levels: attractiveness contrasts within each difficulty level, and difficulty contrasts within each attractiveness level.
+
+## Attractiveness Contrasts
+
+```{r exp2-contrasts-attr}
+# Calculate attractiveness contrasts by difficulty level
+exp2_contrasts_attr <- estimate_contrasts(exp2_model_fit, contrast = "attractiveness", by = "difficulty", ci = ci_level, rope_ci = ci_level, p_adjust = "mvt")
+
+exp2_contrasts_attr
+```
+
+### Save Attractiveness Contrasts
+
+```{r exp2-save-contrasts-attr}
+# Save attractiveness contrasts (Optional: saves to `output/`)
+# write_csv(exp2_contrasts_attr, "../output/exp2_attractiveness_contrasts.csv")
+```
+
+## Difficulty Contrasts
+
+```{r exp2-contrasts-diff}
+# Calculate difficulty contrasts by attractiveness level
+exp2_contrasts_diff <- estimate_contrasts(exp2_model_fit, contrast = "difficulty", by = "attractiveness", ci = ci_level, rope_ci = ci_level, p_adjust = "mvt")
+
+exp2_contrasts_diff
+```
+
+### Save Difficulty Contrasts
+
+```{r exp2-save-contrasts-diff}
+# Save difficulty contrasts (Optional: saves to `output/`)
+# write_csv(exp2_contrasts_diff, "../output/exp2_difficulty_contrasts.csv")
+```
+
+# Visualization
+
+Marginal delay preferences and pairwise contrast estimates across conditions.
+
+## Preferences in Task Delay
+
+```{r exp2-means-plot}
+# Visualize means across difficulty and attractiveness
+exp2_means_plot <-
+  exp2_marginal_means %>%
+  mutate(
+    log_t = Median
+  ) %>%
+  ggplot(aes(x = difficulty, y = log_t, group = attractiveness, color = attractiveness)) +
+  geom_point(size = 1) +
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.1, linewidth = 0.5) +
+  geom_line(linewidth = 0.5) +
+  labs(
+    title = "Preferences in Task Delay",
+    x = "Task Difficulty", y = "log(t)",
+    color = "Task Appeal"
+  ) +
+  coord_cartesian(ylim = range(exp2_delay_data$log_t)) +
+  scale_color_grey() +
+  scale_fill_grey() +
+  theme_modern() +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_text(hjust = 1.1),
+    plot.margin = unit(c(0, 3, 0, 0), "lines")
+  )
+
+exp2_means_plot
+```
+
+## Attractiveness Contrasts Plot
+
+```{r exp2-contrasts-attr-plot}
+# Visualize attractiveness contrasts
+exp2_contrasts_attr_plot <-
+  exp2_contrasts_attr %>%
+  ggplot(aes(x = difficulty, y = Median, fill = difficulty)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_col(color = "black", width = 0.25, linewidth = 0.5) +
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.1, linewidth = 0.5) +
+  labs(
+    title = "Differences in Task Delay\n(Preference by Difficulty)",
+    x = "Task Difficulty", y = "log(t) Boring - Interesting",
+    fill = "Task Difficulty"
+  ) +
+  guides(fill = "none") +
+  coord_flip(ylim = c(-2, 2)) +
+  scale_fill_manual(values = c("white", "white")) +
+  theme_modern() +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_text(hjust = 1)
+  )
+
+exp2_contrasts_attr_plot
+```
+
+## Difficulty Contrasts Plot
+
+```{r exp2-contrasts-diff-plot}
+# Visualize difficulty contrasts
+exp2_contrasts_diff_plot <-
+  exp2_contrasts_diff %>%
+  ggplot(aes(x = attractiveness, y = Median, fill = attractiveness)) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_col(color = "black", width = 0.25, linewidth = 0.5) +
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high), width = 0.1, linewidth = 0.5) +
+  labs(
+    title = "Differences in Task Delay\n(Preference by Attractiveness)",
+    x = "Task Attractiveness", y = "log(t) Easy - Hard",
+    fill = "Attractiveness"
+  ) +
+  guides(fill = "none") +
+  coord_flip(ylim = c(-2, 2)) +
+  scale_fill_manual(values = c("white", "white")) +
+  theme_modern() +
+  theme(
+    aspect.ratio = 1,
+    plot.title = element_text(hjust = 0.8)
+  )
+
+exp2_contrasts_diff_plot
+```
+
+## Combined Figure
+
+```{r exp2-figure}
+# Create and save figure 2
+fig2 <-
+  exp2_means_plot + exp2_contrasts_attr_plot + exp2_contrasts_diff_plot +
+    plot_layout(guides = "collect") +
+    plot_annotation(tag_levels = "a") &
+    theme(
+      plot.title = element_text(size = 12),
+      legend.position = "bottom"
+      )
+
+print(fig2)
+
+ggsave("../output/fig2.png", fig2, width = 10, height = 4)
+```
+
+# Session
+
+```{r session}
+sessionInfo()
+```

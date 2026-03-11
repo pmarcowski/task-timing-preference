@@ -1,0 +1,50 @@
+project:
+  type: website
+  output-dir: _site
+  render:
+    - index.qmd
+    - analysis/
+
+website:
+  title: "Task Timing and Preference"
+  description: "Companion website for the research paper on temporal task scheduling decisions"
+  site-url: "https://pmarcowski.github.io/task-timing-preference/"
+  repo-url: "https://github.com/pmarcowski/task-timing-preference"
+  repo-actions: [source]
+  open-graph:
+    image: preview.png
+  twitter-card:
+    image: preview.png
+  navbar:
+    background: dark
+    title: "Task Timing & Preference"
+    left:
+      - text: "Home"
+        href: index.qmd
+      - text: "Analyses"
+        menu:
+          - text: "Pilot Study"
+            href: analysis/analysis_pilot.qmd
+          - text: "Experiment 1"
+            href: analysis/analysis_exp1.qmd
+          - text: "Experiment 2"
+            href: analysis/analysis_exp2.qmd
+          - text: "Experiment 3"
+            href: analysis/analysis_exp3.qmd
+    right:
+      - icon: github
+        href: "https://github.com/pmarcowski/task-timing-preference"
+  page-footer:
+    center: "Copyright 2025, Przemyslaw Marcowski"
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: show
+    df-print: paged
+
+execute:
+  freeze: auto

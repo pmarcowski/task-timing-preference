@@ -2,19 +2,9 @@
 
 # Task timing and preference analysis
 
-This repository contains the data preprocessing and analysis scripts for a research project investigating temporal task scheduling and preferences. The study examines how task timing, difficulty, and attractiveness influence decision-making across three experiments.
+**[Companion Website](https://pmarcowski.github.io/task-timing-preference/)**
 
-## Table of Contents
-
-* [Overview](#overview)
-* [Directory Structure](#directory-structure)
-* [Installation](#installation)
-* [Usage](#usage)
-* [Data](#data)
-* [Analysis](#analysis)
-* [License](#license)
-* [Citation](#citation)
-* [Contact](#contact)
+This repository contains the data and analysis notebooks for a research project investigating temporal task scheduling and preferences. The study examines how task timing, difficulty, and attractiveness influence decision-making across three experiments.
 
 ## Overview
 
@@ -24,90 +14,66 @@ This project investigates how individuals make decisions about task scheduling b
 2. Task difficulty (easy vs. hard)
 3. Task attractiveness (boring vs. interesting)
 
-The research uses both empirical and modeling approaches to demonstrate how these factors interact to influence task preferences and scheduling decisions.
-
-**Key components of the analysis include:**
-
-- Power analysis for sample size estimation
-- Data preprocessing for three experiments
-- Statistical analysis using Bayesian models
-- Visualization of results
+The research uses Bayesian statistical models to demonstrate how these factors interact to influence task preferences and scheduling decisions.
 
 ## Directory Structure
 
 ```
-temporal-task-scheduling/
+task-timing-preference/
+│
+├── R/
+│   ├── power_analysis.R       # A priori power analyses
+│   ├── prepare_data.R         # Data preprocessing
+│   └── render_all.R           # Batch rendering utility
+│
+├── analysis/
+│   ├── analysis_pilot.qmd     # Pilot study analysis
+│   ├── analysis_exp1.qmd      # Experiment 1 (binomial model)
+│   ├── analysis_exp2.qmd      # Experiment 2 (Gaussian mixed model)
+│   └── analysis_exp3.qmd      # Experiment 3 (Bernoulli mixed model)
 │
 ├── data/
-│   ├── raw/
-│   └── prepared/
+│   └── prepared/              # Preprocessed .Rds files
 │
-├── output/
-│   ├── figures/
-│   └── results/
+├── output/                    # Figures and fitted model objects
 │
-├── prepare_data.R
-├── analysis_exp1.R
-├── analysis_exp2.R
-├── analysis_exp3.R
-├── power.R
+├── _quarto.yml                # Website configuration
+├── index.qmd                  # Website landing page
 ├── LICENSE
 └── README.md
 ```
 
 ## Installation
 
-To run the analysis, you'll need R and the following packages installed:
+To run the analyses, you need R and the following packages:
 
 ```r
-install.packages(c("tidyverse", "brms", "easystats", "patchwork", "glmmTMB", "simr"))
+install.packages(c("tidyverse", "brms", "easystats", "patchwork", "see",
+                    "BayesFactor", "bayestestR", "pwr", "glmmTMB", "simr"))
 ```
 
 ## Usage
 
-1. Download or clone this repository:
+The analysis notebooks in `analysis/` are Quarto documents that can be rendered individually or as a website:
 
-```
-git clone https://github.com/pmarcowski/task-timing-preference.git
-```
+```bash
+# Render the full website
+quarto render
 
-2. Navigate to the project directory:
-
-```
-cd temporal-task-scheduling
+# Preview locally
+quarto preview
 ```
 
-Run the R scripts in the following order:
+## Data
 
-- `power.R`
-- `prepare_data.R`
-- `analysis_exp1.R`
-- `analysis_exp2.R`
-- `analysis_exp3.R`
+The project includes data from a pilot study and three experiments:
 
-Each script can be executed in an R environment. The scripts are designed to be run sequentially, as later scripts may depend on the output of earlier ones.
+- **Pilot**: Task difficulty and interest ratings in experimental vs. survey contexts
+- **Experiment 1**: Choice between easy/boring and hard/interesting tasks with immediate or future timing
+- **Experiment 2**: Preferences for task delay based on difficulty and attractiveness
+- **Experiment 3**: Task acceptance probabilities based on difficulty, attractiveness, and delay
 
-### Data
-
-The project includes data from three experiments:
-
-- Experiment 1: Choice between easy/boring and hard/interesting tasks with immediate or future timing
-- Experiment 2: Preferences for task delay based on difficulty and attractiveness
-- Experiment 3: Task acceptance probabilities based on difficulty, attractiveness, and delay
-
-Raw data is stored in `data/raw/`, and preprocessed data is saved in `data/prepared/`.
-
-### Analysis
-
-The analysis is split into several steps:
-
-- Power analysis for sample size estimation (`power.R`)
-- Data preprocessing (`prepare_data.R`)
-- Analysis of Experiment 1 (`analysis_exp1.R`)
-- Analysis of Experiment 2 (`analysis_exp2.R`)
-- Analysis of Experiment 3 (`analysis_exp3.R`)
-
-Results, including figures and statistical outputs, will be saved in the `output/` directory.
+Preprocessed data is stored in `data/prepared/`.
 
 ## License
 
@@ -115,9 +81,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Citation
 
-If you use this code or data in your research, please cite our paper:
-
-[Citation information to be added upon publication]
+Citation information to be added upon publication.
 
 ## Contact
 
