@@ -263,7 +263,6 @@ exp1_means_plot <-
     strip.background = element_rect(color = "transparent", fill = "transparent")
   )
 
-exp1_means_plot
 ```
 
 #### Differences in task preference
@@ -294,7 +293,6 @@ exp1_contrasts_plot <-
     strip.background = element_rect(color = "transparent", fill = "transparent")
   )
 
-exp1_contrasts_plot
 ```
 
 #### Combined estimates

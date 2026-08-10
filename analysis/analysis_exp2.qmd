@@ -211,7 +211,6 @@ exp2_means_plot <-
     plot.margin = unit(c(0, 3, 0, 0), "lines")
   )
 
-exp2_means_plot
 ```
 
 #### Attractiveness contrasts
@@ -242,7 +241,6 @@ exp2_contrasts_attr_plot <-
     plot.title = element_text(hjust = 1)
   )
 
-exp2_contrasts_attr_plot
 ```
 
 #### Difficulty contrasts
@@ -273,7 +271,6 @@ exp2_contrasts_diff_plot <-
     plot.title = element_text(hjust = 0.8)
   )
 
-exp2_contrasts_diff_plot
 ```
 
 #### Combined results

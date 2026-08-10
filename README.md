@@ -47,7 +47,7 @@ Use R 4.5 or later and Quarto 1.9 or later. The notebooks and site build use `ti
 3. Open `_site/index.html` and inspect the full site locally.
 4. Publish `_site/` as a static site, using `_site/index.html` as the entry point.
 
-To intentionally refresh the frozen notebook execution, run `quarto render analysis/` locally, then run `quarto render` for the full site. A refresh requires the prepared data, the complete R package environment, and Stan toolchain. It should be followed by checks that the prepared inputs, inferential specifications, numerical outputs, and exported figures remain unchanged.
+To intentionally refresh a frozen execution, render each notebook with `quarto render analysis/<notebook>.qmd --execute`, then run `quarto render --use-freezer` for the complete site. A refresh requires the prepared data, the complete R package environment, and Stan toolchain. It should be followed by checks that the prepared inputs, inferential specifications, numerical outputs, and exported figures remain unchanged.
 
 ## License
 

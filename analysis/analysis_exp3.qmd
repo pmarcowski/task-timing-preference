@@ -238,7 +238,6 @@ exp3_means_time_plot <-
     strip.background = element_rect(color = "transparent", fill = "transparent")
   )
 
-exp3_means_time_plot
 ```
 
 #### Marginal task acceptance
@@ -271,7 +270,6 @@ exp3_means_plot <-
     strip.background = element_rect(color = "transparent", fill = "transparent")
   )
 
-exp3_means_plot
 ```
 
 #### Differences in task acceptance
@@ -303,7 +301,6 @@ exp3_contrasts_plot <-
     strip.background = element_rect(color = "transparent", fill = "transparent")
   )
 
-exp3_contrasts_plot
 ```
 
 #### Effects of task delay on preference
@@ -336,7 +333,6 @@ exp3_slopes_plot <-
     plot.title = element_text(hjust = 1.5)
   )
 
-exp3_slopes_plot
 ```
 
 #### Combined results
