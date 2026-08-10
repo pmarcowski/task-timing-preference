@@ -1,10 +1,9 @@
 ---
-title: "Bayesian Analysis of Task Difficulty and Interest Ratings (Pilot Study)"
-author: "Przemyslaw Marcowski, PhD"
-date: "today"
+title: "Pilot Study: Difficulty and Interest Ratings"
+author: "Przemysław Marcowski, PhD"
 ---
 
-```{r setup, message=FALSE, warning=FALSE}
+```{r setup, include=FALSE}
 #| code-fold: true
 
 library(tidyverse)
@@ -16,23 +15,37 @@ ci_level <- 0.99
 ci_pct <- sprintf("%d%%", round(ci_level * 100))
 
 set.seed(42) # for reproducibility
-
-# Prepare data for each experiment
-# source("../R/prepare_data.R") # Optional: prepares to `data/prepared/`
 ```
 
-# Data Import
+## Overview
 
-Prepared pilot data comparing task difficulty and interest ratings between experimental and survey contexts.
+The pilot study compared how the same tasks were rated in experimental and survey contexts. Bayesian paired-sample tests quantify context differences in perceived difficulty and interest.
+
+## Design and sample
+
+Each participant rated task difficulty and interest in both contexts. The prepared dataset contains one row per participant; no participant-level records are displayed.
 
 ```{r pilot-import}
 # Read pilot data
 pilot_data <- readRDS("../data/prepared/pilot.Rds")
-
-pilot_data
 ```
 
-# Descriptive Statistics
+```{r pilot-sample}
+#| tbl-cap: "Pilot sample"
+
+tibble(
+  Metric = c("Participants", "Mean age", "Age SD"),
+  Value = c(
+    n_distinct(pilot_data$id),
+    mean(pilot_data$age, na.rm = TRUE),
+    sd(pilot_data$age, na.rm = TRUE)
+  )
+) %>%
+  gt::gt() %>%
+  gt::fmt_number(columns = Value, decimals = 1)
+```
+
+### Descriptive ratings
 
 Mean, standard deviation, and sample size for each rating measure across both contexts.
 
@@ -72,21 +85,17 @@ descriptive_stats <- pilot_data %>%
     )
   )
 
-descriptive_stats
+descriptive_stats %>%
+  select(Context = task, Measure = measure, Mean = mean, SD = sd, N = n) %>%
+  gt::gt() %>%
+  gt::fmt_number(columns = c(Mean, SD), decimals = 2)
 ```
 
-## Save Descriptive Statistics
-
-```{r pilot-save-descriptives}
-# Save results (Optional: saves to `output/`)
-# write_csv(descriptive_stats, "../output/pilot_descriptive_stats.csv")
-```
-
-# Bayesian Analysis
+## Analysis
 
 Bayesian paired t-tests comparing experimental vs. survey ratings for difficulty and interest, using a medium Cauchy prior (r = 0.707) on the effect size.
 
-## Task Difficulty Ratings
+### Task difficulty
 
 ```{r pilot-difficulty-test}
 # Bayesian paired t-test for task difficulty ratings
@@ -100,7 +109,7 @@ difficulty_bf <- ttestBF(
 difficulty_bf
 ```
 
-### Posterior Samples
+#### Posterior samples
 
 ```{r pilot-difficulty-posterior}
 # Extract posterior samples
@@ -108,7 +117,7 @@ difficulty_posterior <- posterior(difficulty_bf, iterations = 10000)
 difficulty_effect <- difficulty_posterior[, "delta"]
 ```
 
-### Summary Statistics
+#### Posterior summary
 
 ```{r pilot-difficulty-summary}
 # Calculate summary statistics for task difficulty ratings
@@ -121,7 +130,7 @@ cat(ci_pct, "HDI:", difficulty_hdi$CI_low, "-", difficulty_hdi$CI_high, "\n")
 cat("Bayes Factor:", difficulty_bf_value, "\n")
 ```
 
-## Task Interest Ratings
+### Task interest
 
 ```{r pilot-interest-test}
 # Bayesian paired t-test for appeal ratings
@@ -135,7 +144,7 @@ interest_bf <- ttestBF(
 interest_bf
 ```
 
-### Posterior Samples
+#### Posterior samples
 
 ```{r pilot-interest-posterior}
 # Extract posterior samples
@@ -143,7 +152,7 @@ interest_posterior <- posterior(interest_bf, iterations = 10000)
 interest_effect <- interest_posterior[, "delta"]
 ```
 
-### Summary Statistics
+#### Posterior summary
 
 ```{r pilot-interest-summary}
 # Calculate summary statistics for appeal ratings
@@ -156,7 +165,7 @@ cat(ci_pct, "HDI:", interest_hdi$CI_low, "-", interest_hdi$CI_high, "\n")
 cat("Bayes Factor:", interest_bf_value, "\n")
 ```
 
-# Results Summary
+## Results
 
 Posterior mean effect sizes (Cohen's *d*), 99% HDIs, and Bayes Factors for both comparisons.
 
@@ -178,17 +187,40 @@ pilot_summary <- tibble(
   Log_BF = c(log(difficulty_bf_value), log(interest_bf_value))
 )
 
-pilot_summary
+pilot_summary %>%
+  select(
+    summary_measure = Measure,
+    summary_comparison = Comparison,
+    `Posterior mean (d)` = Post_Mean_d,
+    `99% HDI, lower` = HDI_low,
+    `99% HDI, upper` = HDI_high,
+    `Bayes factor` = Bayes_Factor,
+    `Log Bayes factor` = Log_BF
+  ) %>%
+  gt::gt() %>%
+  gt::cols_label(
+    summary_measure = "Measure",
+    summary_comparison = "Comparison"
+  ) %>%
+  gt::fmt_number(
+    columns = c(
+      `Posterior mean (d)`,
+      `99% HDI, lower`,
+      `99% HDI, upper`,
+      `Bayes factor`,
+      `Log Bayes factor`
+    ),
+    decimals = 2
+  )
 ```
 
-## Save Results
+## Interpretation
 
-```{r pilot-save-summary}
-# Save results (Optional: saves to `output/`)
-# write_csv(pilot_summary, "../output/pilot_test_summary.csv")
-```
+Positive effects indicate higher ratings in the experimental context; negative effects indicate higher ratings in the survey context. The posterior means and 99% HDIs describe the magnitude and uncertainty of each difference, while the Bayes factors compare the paired-difference model with the null.
 
-# Session
+## Supplement and reproducibility
+
+The tests use a Cauchy prior with scale 0.707, 10,000 posterior draws per comparison, a 99% interval, and a fixed random seed.
 
 ```{r session}
 sessionInfo()

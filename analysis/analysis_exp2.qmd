@@ -1,10 +1,9 @@
 ---
-title: "Data Analysis for the Temporal Task Scheduling Project (Experiment 2)"
-author: "Przemyslaw Marcowski, PhD"
-date: "today"
+title: "Experiment 2: Preferred Task Delay"
+author: "Przemysław Marcowski, PhD"
 ---
 
-```{r setup, message=FALSE, warning=FALSE}
+```{r setup, include=FALSE}
 #| code-fold: true
 
 library(tidyverse)
@@ -17,27 +16,44 @@ library(see)
 ci_level <- 0.99
 
 set.seed(42) # for reproducibility
-
-# Prepare data for each experiment
-# source("../R/prepare_data.R") # Optional: prepares to `data/prepared/`
 ```
 
-# Data Import
+## Overview
 
-Prepared data from Experiment 2, where participants indicated preferred task delay across four conditions defined by crossing difficulty (easy, hard) and attractiveness (boring, interesting).
+Experiment 2 tests how task difficulty and attractiveness jointly shape preferred delay. Participants reported when they would prefer to complete tasks in four conditions crossing easy versus hard with boring versus interesting.
+
+The analysis models log-transformed delay with a Gaussian mixed model. Participant-specific intercepts account for repeated observations, and 99% intervals carry uncertainty through the model summaries, marginal means, and contrasts.
+
+## Design and sample
+
+The prepared data contain one row per task-delay response. The notebook reports only aggregate sample information; participant-level records are not displayed.
 
 ```{r exp2-import}
 # Read prepared data from Experiment 2
 exp2_delay_data <- readRDS("../data/prepared/exp2.Rds")
-
-exp2_delay_data
 ```
 
-# Sample Characteristics
+```{r exp2-data-summary}
+#| echo: false
+
+tibble::tibble(
+  `Data feature` = c("Responses", "Participants", "Variables", "Experimental conditions", "Missing cells"),
+  Value = c(
+    format(nrow(exp2_delay_data), big.mark = ","),
+    format(dplyr::n_distinct(exp2_delay_data$id), big.mark = ","),
+    ncol(exp2_delay_data),
+    dplyr::n_distinct(interaction(exp2_delay_data$difficulty, exp2_delay_data$attractiveness)),
+    format(sum(is.na(exp2_delay_data)), big.mark = ",")
+  )
+) |>
+  gt::gt()
+```
+
+### Sample characteristics
 
 ```{r exp2-demographics}
 # Inspect sample characteristics
-exp2_delay_data %>%
+exp2_sample <- exp2_delay_data %>%
   group_by(id) %>%
   slice(1) %>%
   ungroup() %>%
@@ -46,11 +62,23 @@ exp2_delay_data %>%
     mean_age = mean(age),
     sd_age = sd(age),
     n_male = n_distinct(id[gender == "Male"]),
-    n_female = n_distinct(id[gender == "Female"])
+    n_female = n_distinct(id[gender == "Female"]),
+    n_other = n_distinct(id[gender == "Other"])
   )
+
+exp2_sample %>%
+  transmute(
+    Participants = n,
+    `Mean age` = round(mean_age, 1),
+    `Age SD` = round(sd_age, 1),
+    Male = n_male,
+    Female = n_female,
+    Other = n_other
+  ) %>%
+  gt::gt()
 ```
 
-# Follow-up Task Preferences
+### Follow-up task preferences
 
 Counts of preferred task types for immediate and delayed execution.
 
@@ -68,11 +96,11 @@ exp2_delay_data %>%
   spread(pref, n)
 ```
 
-# Gaussian Model
+## Analysis
 
-Gaussian mixed model predicting log-transformed delay from difficulty, attractiveness, and their interaction, with random intercepts by participant.
+The Gaussian mixed model predicts log-delay from difficulty, attractiveness, and their interaction. Random intercepts represent stable between-participant differences in preferred delay.
 
-## Model Specification
+### Model specification
 
 ```{r exp2-model-spec}
 # Model formula and family
@@ -83,7 +111,7 @@ exp2_model_priors <- get_prior(exp2_model_formula, data = exp2_delay_data, famil
 exp2_model_priors
 ```
 
-## Model Fitting
+### Model fitting
 
 ```{r exp2-model-fit}
 # Fit Gaussian model
@@ -96,14 +124,16 @@ exp2_model_fit <-
   )
 ```
 
-## Model Summary
+## Results
+
+### Model summary
 
 ```{r exp2-model-summary}
 # Inspect model
 summary(exp2_model_fit, prob = ci_level)
 ```
 
-## Posterior Description
+### Posterior description
 
 ```{r exp2-posterior}
 # Describe posterior
@@ -112,14 +142,7 @@ exp2_posterior_desc <- describe_posterior(exp2_model_fit, ci = ci_level, rope_ci
 exp2_posterior_desc
 ```
 
-## Save Coefficients
-
-```{r exp2-save-coefficients}
-# Save model coefficients (Optional: saves to `output/`)
-# write_csv(exp2_posterior_desc, "../output/exp2_model_coefficients.csv")
-```
-
-# Marginal Means
+### Marginal means
 
 Predicted log-delay by difficulty and attractiveness condition.
 
@@ -130,18 +153,11 @@ exp2_marginal_means <- estimate_means(exp2_model_fit, at = c("difficulty", "attr
 exp2_marginal_means
 ```
 
-## Save Marginal Means
-
-```{r exp2-save-means}
-# Save marginal means (Optional: saves to `output/`)
-# write_csv(exp2_marginal_means, "../output/exp2_marginal_means.csv")
-```
-
-# Contrasts
+### Contrasts
 
 Pairwise differences between factor levels: attractiveness contrasts within each difficulty level, and difficulty contrasts within each attractiveness level.
 
-## Attractiveness Contrasts
+#### Attractiveness contrasts
 
 ```{r exp2-contrasts-attr}
 # Calculate attractiveness contrasts by difficulty level
@@ -150,14 +166,7 @@ exp2_contrasts_attr <- estimate_contrasts(exp2_model_fit, contrast = "attractive
 exp2_contrasts_attr
 ```
 
-### Save Attractiveness Contrasts
-
-```{r exp2-save-contrasts-attr}
-# Save attractiveness contrasts (Optional: saves to `output/`)
-# write_csv(exp2_contrasts_attr, "../output/exp2_attractiveness_contrasts.csv")
-```
-
-## Difficulty Contrasts
+#### Difficulty contrasts
 
 ```{r exp2-contrasts-diff}
 # Calculate difficulty contrasts by attractiveness level
@@ -166,20 +175,17 @@ exp2_contrasts_diff <- estimate_contrasts(exp2_model_fit, contrast = "difficulty
 exp2_contrasts_diff
 ```
 
-### Save Difficulty Contrasts
-
-```{r exp2-save-contrasts-diff}
-# Save difficulty contrasts (Optional: saves to `output/`)
-# write_csv(exp2_contrasts_diff, "../output/exp2_difficulty_contrasts.csv")
-```
-
-# Visualization
+### Figure
 
 Marginal delay preferences and pairwise contrast estimates across conditions.
 
-## Preferences in Task Delay
+#### Preferred task delay
 
 ```{r exp2-means-plot}
+#| fig-show: hide
+#| fig-cap: "Model-estimated log-delay by task difficulty and attractiveness. Error bars show 99% intervals."
+#| fig-alt: "Line plot of estimated log-delay for easy and hard tasks, with separate series for boring and interesting tasks and 99% interval bars."
+
 # Visualize means across difficulty and attractiveness
 exp2_means_plot <-
   exp2_marginal_means %>%
@@ -208,9 +214,13 @@ exp2_means_plot <-
 exp2_means_plot
 ```
 
-## Attractiveness Contrasts Plot
+#### Attractiveness contrasts
 
 ```{r exp2-contrasts-attr-plot}
+#| fig-show: hide
+#| fig-cap: "Attractiveness contrasts within each difficulty condition. Error bars show 99% intervals."
+#| fig-alt: "Horizontal contrast plot comparing boring with interesting tasks separately for easy and hard tasks. A dashed line marks no difference."
+
 # Visualize attractiveness contrasts
 exp2_contrasts_attr_plot <-
   exp2_contrasts_attr %>%
@@ -235,9 +245,13 @@ exp2_contrasts_attr_plot <-
 exp2_contrasts_attr_plot
 ```
 
-## Difficulty Contrasts Plot
+#### Difficulty contrasts
 
 ```{r exp2-contrasts-diff-plot}
+#| fig-show: hide
+#| fig-cap: "Difficulty contrasts within each attractiveness condition. Error bars show 99% intervals."
+#| fig-alt: "Horizontal contrast plot comparing easy with hard tasks separately for boring and interesting tasks. A dashed line marks no difference."
+
 # Visualize difficulty contrasts
 exp2_contrasts_diff_plot <-
   exp2_contrasts_diff %>%
@@ -262,9 +276,14 @@ exp2_contrasts_diff_plot <-
 exp2_contrasts_diff_plot
 ```
 
-## Combined Figure
+#### Combined results
 
 ```{r exp2-figure}
+#| fig-cap: "Preferred task delay and condition contrasts in Experiment 2. Panel a shows model-estimated log-delay; panels b and c show attractiveness and difficulty contrasts. Intervals are 99%."
+#| fig-alt: "Three-panel figure showing estimated task delay, boring-minus-interesting contrasts, and easy-minus-hard contrasts across the experimental conditions."
+#| fig-width: 10
+#| fig-height: 4
+
 # Create and save figure 2
 fig2 <-
   exp2_means_plot + exp2_contrasts_attr_plot + exp2_contrasts_diff_plot +
@@ -280,7 +299,15 @@ print(fig2)
 ggsave("../output/fig2.png", fig2, width = 10, height = 4)
 ```
 
-# Session
+## Interpretation
+
+The marginal means describe expected delay in each condition. The contrasts isolate the attractiveness difference at each difficulty level and the difficulty difference at each attractiveness level. For each estimate, the posterior median gives the effect direction and magnitude; the 99% interval shows the remaining uncertainty.
+
+## Supplement and reproducibility
+
+The model uses a fixed seed and a cached fit under `output/`. The session record identifies the software environment used to produce the displayed summaries and figure.
+
+### Session information
 
 ```{r session}
 sessionInfo()

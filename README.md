@@ -1,88 +1,54 @@
-![Preview](preview.png)
+![Task timing and preference](preview.png)
 
-# Task timing and preference analysis
+# Task timing and preference
 
-**[Companion Website](https://pmarcowski.github.io/task-timing-preference/)**
+[![License: GPL v3](https://img.shields.io/badge/License-GPL_v3-3f4d70.svg)](LICENSE)
 
-This repository contains the data and analysis notebooks for a research project investigating temporal task scheduling and preferences. The study examines how task timing, difficulty, and attractiveness influence decision-making across three experiments.
+This repository contains the prepared data, R code, Bayesian analysis notebooks, and figure outputs for four studies of task timing and preference. The pilot calibrates task ratings; the three experiments examine how timing, difficulty, and attractiveness relate to task choice or preferred delay.
 
-## Overview
+The Quarto website is a locked study companion. Its public pages present aggregate summaries and model results while retaining the executable specifications used for each analysis.
 
-This project investigates how individuals make decisions about task scheduling based on factors such as:
+## Studies
 
-1. Task timing (immediate vs. future)
-2. Task difficulty (easy vs. hard)
-3. Task attractiveness (boring vs. interesting)
+| Study | Outcome | Analysis |
+|---|---|---|
+| Pilot | Difficulty and interest ratings | Paired Bayesian *t*-tests |
+| Experiment 1 | Choice between task types | Aggregated binomial-logit model |
+| Experiment 2 | Preferred task delay | Gaussian mixed model |
+| Experiment 3 | Task acceptance | Bernoulli-logit mixed model |
 
-The research uses Bayesian statistical models to demonstrate how these factors interact to influence task preferences and scheduling decisions.
+The four reports are in [`analysis/`](analysis/). Start with the [pilot](analysis/analysis_pilot.qmd), [Experiment 1](analysis/analysis_exp1.qmd), [Experiment 2](analysis/analysis_exp2.qmd), or [Experiment 3](analysis/analysis_exp3.qmd).
 
-## Directory Structure
+## Repository layout
 
-```
-task-timing-preference/
-│
-├── R/
-│   ├── power_analysis.R       # A priori power analyses
-│   ├── prepare_data.R         # Data preprocessing
-│   └── render_all.R           # Batch rendering utility
-│
-├── analysis/
-│   ├── analysis_pilot.qmd     # Pilot study analysis
-│   ├── analysis_exp1.qmd      # Experiment 1 (binomial model)
-│   ├── analysis_exp2.qmd      # Experiment 2 (Gaussian mixed model)
-│   └── analysis_exp3.qmd      # Experiment 3 (Bernoulli mixed model)
-│
-├── data/
-│   └── prepared/              # Preprocessed .Rds files
-│
-├── output/                    # Figures and fitted model objects
-│
-├── _quarto.yml                # Website configuration
-├── index.qmd                  # Website landing page
-├── LICENSE
-└── README.md
-```
+| Path | Contents |
+|---|---|
+| `analysis/` | Canonical Quarto analysis notebooks and notebook metadata |
+| `data/prepared/` | Versioned analysis-ready data |
+| `R/` | Data preparation and power analysis |
+| `output/` | Published figures and ignored local model caches |
+| `_freeze/` | Versioned Quarto execution snapshots used by the static build |
+| `_site/` | Ignored local website output selected for static publishing |
+| `work/` | Ignored publication materials, excluded from the website |
 
-## Installation
+Raw source data are intentionally excluded from version control. Prepared data remain versioned for reproducibility and may contain pseudonymous participant identifiers. The rendered website does not display participant-level rows.
 
-To run the analyses, you need R and the following packages:
+## Reproduce
 
-```r
-install.packages(c("tidyverse", "brms", "easystats", "patchwork", "see",
-                    "BayesFactor", "bayestestR", "pwr", "glmmTMB", "simr"))
-```
+Use R 4.5 or later and Quarto 1.9 or later. The notebooks and site build use `tidyverse`, `brms`, `easystats`, `emmeans`, `gt`, `patchwork`, `see`, `BayesFactor`, `bayestestR`, and `quarto`; the power analysis additionally uses `pwr`, `glmmTMB`, and `simr`.
 
-## Usage
+1. Clone the repository and open its root directory.
+2. Render the verified static site from the committed freezer:
 
-The analysis notebooks in `analysis/` are Quarto documents that can be rendered individually or as a website:
+   ```powershell
+   quarto render
+   ```
 
-```bash
-# Render the full website
-quarto render
+3. Open `_site/index.html` and inspect the full site locally.
+4. Publish `_site/` as a static site, using `_site/index.html` as the entry point.
 
-# Preview locally
-quarto preview
-```
-
-## Data
-
-The project includes data from a pilot study and three experiments:
-
-- **Pilot**: Task difficulty and interest ratings in experimental vs. survey contexts
-- **Experiment 1**: Choice between easy/boring and hard/interesting tasks with immediate or future timing
-- **Experiment 2**: Preferences for task delay based on difficulty and attractiveness
-- **Experiment 3**: Task acceptance probabilities based on difficulty, attractiveness, and delay
-
-Preprocessed data is stored in `data/prepared/`.
+To intentionally refresh the frozen notebook execution, run `quarto render analysis/` locally, then run `quarto render` for the full site. A refresh requires the prepared data, the complete R package environment, and Stan toolchain. It should be followed by checks that the prepared inputs, inferential specifications, numerical outputs, and exported figures remain unchanged.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Citation
-
-Citation information to be added upon publication.
-
-## Contact
-
-For any questions or feedback, please contact the author directly.
+The code and site source are licensed under the [GNU General Public License v3.0](LICENSE).

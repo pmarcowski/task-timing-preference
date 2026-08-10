@@ -13,9 +13,10 @@
 
 # Quarto
 _site/
-.quarto/
+/.quarto/
 site_libs/
 **/*.quarto_ipynb
+**/*.knit.md
 /index.html
 analysis/*.html
 analysis/*.pdf
@@ -27,5 +28,5 @@ output/*.rds
 # Raw data
 data/raw/
 
-# Publication files
-pub/
+# Internal
+work/

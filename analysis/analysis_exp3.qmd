@@ -1,10 +1,9 @@
 ---
-title: "Data Analysis for the Temporal Task Scheduling Project (Experiment 3)"
-author: "Przemyslaw Marcowski, PhD"
-date: "today"
+title: "Experiment 3: Task Choice Across Delays"
+author: "Przemysław Marcowski, PhD"
 ---
 
-```{r setup, message=FALSE, warning=FALSE}
+```{r setup, include=FALSE}
 #| code-fold: true
 
 library(tidyverse)
@@ -18,27 +17,44 @@ ci_level <- 0.99
 emmeans::emm_options(level = ci_level)
 
 set.seed(42) # for reproducibility
-
-# Prepare data for each experiment
-# source("../R/prepare_data.R") # Optional: prepares to `data/prepared/`
 ```
 
-# Data Import
+## Overview
 
-Prepared data from Experiment 3, where participants made binary task choices across six delay levels under conditions varying in difficulty and attractiveness.
+Experiment 3 tests whether the delay before a task changes its likelihood of being chosen, and whether that relationship depends on task difficulty and attractiveness. Participants made binary choices across six delay levels in four task conditions.
+
+The analysis uses a Bernoulli logit mixed model with all interactions among difficulty, attractiveness, and log-delay. Participant-specific intercepts account for repeated choices, and 99% intervals carry uncertainty through the posterior summaries and derived estimates.
+
+## Design and sample
+
+The prepared data contain one row per task choice. The notebook reports only aggregate sample information; participant-level records are not displayed.
 
 ```{r exp3-import}
 # Read prepared data from Experiment 3
 exp3_task_data <- readRDS("../data/prepared/exp3.Rds")
-
-exp3_task_data
 ```
 
-# Sample Characteristics
+```{r exp3-data-summary}
+#| echo: false
+
+tibble::tibble(
+  `Data feature` = c("Choices", "Participants", "Variables", "Condition-by-delay cells", "Missing cells"),
+  Value = c(
+    format(nrow(exp3_task_data), big.mark = ","),
+    format(dplyr::n_distinct(exp3_task_data$id), big.mark = ","),
+    ncol(exp3_task_data),
+    dplyr::n_distinct(interaction(exp3_task_data$difficulty, exp3_task_data$attractiveness, exp3_task_data$log_t)),
+    format(sum(is.na(exp3_task_data)), big.mark = ",")
+  )
+) |>
+  gt::gt()
+```
+
+### Sample characteristics
 
 ```{r exp3-demographics}
 # Inspect sample characteristics
-exp3_task_data %>%
+exp3_sample <- exp3_task_data %>%
   group_by(id) %>%
   slice(1) %>%
   ungroup() %>%
@@ -47,11 +63,23 @@ exp3_task_data %>%
     mean_age = mean(age),
     sd_age = sd(age),
     n_male = n_distinct(id[gender == "Male"]),
-    n_female = n_distinct(id[gender == "Female"])
+    n_female = n_distinct(id[gender == "Female"]),
+    n_other = n_distinct(id[gender == "Other"])
   )
+
+exp3_sample %>%
+  transmute(
+    Participants = n,
+    `Mean age` = round(mean_age, 1),
+    `Age SD` = round(sd_age, 1),
+    Male = n_male,
+    Female = n_female,
+    Other = n_other
+  ) %>%
+  gt::gt()
 ```
 
-# Empirical Choice Proportions
+### Empirical choice proportions
 
 Observed choice proportions by difficulty, attractiveness, and delay level, with 99% confidence intervals.
 
@@ -74,11 +102,11 @@ props3 <-
 props3
 ```
 
-# Bernoulli Model
+## Analysis
 
-Bernoulli logit mixed model predicting task choice from difficulty, attractiveness, log-delay, and all interactions, with random intercepts by participant.
+The Bernoulli logit mixed model predicts task choice from difficulty, attractiveness, log-delay, and their interactions. Random intercepts represent stable between-participant differences in choice propensity.
 
-## Model Specification
+### Model specification
 
 ```{r exp3-model-spec}
 # Model formula and family
@@ -89,7 +117,7 @@ exp3_model_priors <- get_prior(exp3_model_formula, data = exp3_task_data, family
 exp3_model_priors
 ```
 
-## Model Fitting
+### Model fitting
 
 ```{r exp3-model-fit}
 # Fit Bernoulli model with logit link
@@ -102,14 +130,16 @@ exp3_model_fit <-
   )
 ```
 
-## Model Summary
+## Results
+
+### Model summary
 
 ```{r exp3-model-summary}
 # Inspect model
 summary(exp3_model_fit, prob = ci_level)
 ```
 
-## Posterior Description
+### Posterior description
 
 ```{r exp3-posterior}
 # Describe posterior
@@ -118,18 +148,11 @@ exp3_posterior_desc <- bayestestR::describe_posterior(exp3_model_fit, ci = ci_le
 exp3_posterior_desc
 ```
 
-## Save Coefficients
-
-```{r exp3-save-coefficients}
-# Save model coefficients (Optional: saves to `output/`)
-# write_csv(exp3_posterior_desc, "../output/exp3_model_coefficients.csv")
-```
-
-# Marginal Means and Contrasts
+### Marginal means and contrasts
 
 Predicted choice probabilities across the delay range and overall, with pairwise contrasts between attractiveness levels within each difficulty condition.
 
-## Marginal Means by Time
+#### Marginal means by delay
 
 ```{r exp3-means-time}
 # Calculate marginal means across time
@@ -138,7 +161,7 @@ exp3_marginal_means_time <- estimate_means(exp3_model_fit, by = c("difficulty", 
 exp3_marginal_means_time
 ```
 
-## Estimated Marginal Means
+#### Estimated marginal means
 
 ```{r exp3-emmeans}
 # Calculate marginal means and contrasts
@@ -148,14 +171,7 @@ exp3_marginal_means <- as.data.frame(summary(exp3_emmeans$emmeans, level = ci_le
 exp3_marginal_means
 ```
 
-## Save Marginal Means
-
-```{r exp3-save-means}
-# Save marginal means (Optional: saves to `output/`)
-# write_csv(exp3_marginal_means, "../output/exp3_marginal_means.csv")
-```
-
-## Pairwise Contrasts
+#### Pairwise contrasts
 
 ```{r exp3-contrasts}
 # Pairwise contrasts
@@ -165,14 +181,7 @@ exp3_contrasts$sig <- with(exp3_contrasts, ifelse(lower.HPD <= 0 & upper.HPD >= 
 exp3_contrasts
 ```
 
-## Save Contrasts
-
-```{r exp3-save-contrasts}
-# Save contrasts (Optional: saves to `output/`)
-# write_csv(exp3_contrasts, "../output/exp3_pairwise_contrasts.csv")
-```
-
-# Slope Estimates
+### Slope estimates
 
 Standardized delay slopes by difficulty and attractiveness, quantifying how choice probability changes with delay in each condition.
 
@@ -188,20 +197,17 @@ print(exp3_slopes_contrasts)
 exp3_slopes_contrasts
 ```
 
-## Save Slopes
-
-```{r exp3-save-slopes}
-# Save slope estimates (Optional: saves to `output/`)
-# write_csv(exp3_slopes, "../output/exp3_slope_estimates.csv")
-```
-
-# Visualization
+### Figure
 
 Predicted acceptance curves, marginal means, pairwise contrasts, and delay slope estimates.
 
-## Task Acceptance by Delay
+#### Task acceptance by delay
 
 ```{r exp3-means-time-plot}
+#| fig-show: hide
+#| fig-cap: "Model-estimated task acceptance across log-delay, separated by attractiveness and difficulty. Bands show 99% intervals."
+#| fig-alt: "Two faceted curves show task acceptance across log-delay for easy and hard tasks, with uncertainty bands and a horizontal reference at one-half."
+
 # Visualize means across task delay
 exp3_means_time_plot <-
   exp3_marginal_means_time %>%
@@ -235,9 +241,13 @@ exp3_means_time_plot <-
 exp3_means_time_plot
 ```
 
-## Marginal Task Acceptance
+#### Marginal task acceptance
 
 ```{r exp3-means-plot}
+#| fig-show: hide
+#| fig-cap: "Marginal task-acceptance probability by difficulty and attractiveness. Error bars show 99% intervals."
+#| fig-alt: "Line plot of marginal task-acceptance probability for easy and hard tasks, with separate boring and interesting series and 99% interval bars."
+
 # Visualize means across conditions
 exp3_means_plot <-
   exp3_marginal_means %>%
@@ -264,9 +274,13 @@ exp3_means_plot <-
 exp3_means_plot
 ```
 
-## Differences in Task Acceptance
+#### Differences in task acceptance
 
 ```{r exp3-contrasts-plot}
+#| fig-show: hide
+#| fig-cap: "Attractiveness contrasts in task acceptance within each difficulty condition. Error bars show 99% intervals."
+#| fig-alt: "Horizontal contrast plot comparing boring with interesting tasks separately for easy and hard tasks. A dashed line marks no difference."
+
 # Visualize attractiveness contrasts
 exp3_contrasts_plot <-
   exp3_contrasts %>%
@@ -292,9 +306,13 @@ exp3_contrasts_plot <-
 exp3_contrasts_plot
 ```
 
-## Effects of Task Delay on Preference
+#### Effects of task delay on preference
 
 ```{r exp3-slopes-plot}
+#| fig-show: hide
+#| fig-cap: "Standardized delay slopes by task difficulty and attractiveness. Error bars show 99% intervals."
+#| fig-alt: "Horizontal point-and-interval plot of standardized delay slopes for boring and interesting tasks at each difficulty level. A dashed line marks zero."
+
 # Visualize slope estimates
 exp3_slopes_plot <-
   exp3_slopes %>%
@@ -321,13 +339,17 @@ exp3_slopes_plot <-
 exp3_slopes_plot
 ```
 
-## Combined Figure
+#### Combined results
 
 ```{r exp3-figure}
+#| fig-cap: "Task acceptance across delay in Experiment 3. Panel a shows predicted choice curves; panels b through d show delay slopes, marginal acceptance, and attractiveness contrasts. Intervals are 99%."
+#| fig-alt: "Four-panel figure showing predicted task acceptance over delay, standardized delay slopes, marginal acceptance by condition, and boring-minus-interesting contrasts."
+#| fig-width: 10
+#| fig-height: 8
+
 # Create and save figure 3
 fig3 <-
   ((exp3_means_time_plot) / (exp3_slopes_plot + exp3_means_plot + exp3_contrasts_plot)) +
-    # plot_layout(guides = "collect") +
     plot_annotation(tag_levels = "a") &
     theme(
       plot.title = element_text(size = 12),
@@ -339,7 +361,15 @@ print(fig3)
 ggsave("../output/fig3.png", fig3, width = 10, height = 8)
 ```
 
-# Session
+## Interpretation
+
+The acceptance curves show how choice probability changes across the delay range. Marginal means average over delay, attractiveness contrasts compare boring with interesting tasks within each difficulty level, and standardized slopes summarize the delay relationship in each condition. For each estimate, the posterior interval shows the uncertainty around its direction and magnitude.
+
+## Supplement and reproducibility
+
+The model uses a fixed seed and a cached fit under `output/`. The session record identifies the software environment used to produce the displayed summaries and figure.
+
+### Session information
 
 ```{r session}
 sessionInfo()

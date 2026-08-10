@@ -3,25 +3,23 @@ project:
   output-dir: _site
   render:
     - index.qmd
-    - analysis/
+    - analysis/analysis_pilot.qmd
+    - analysis/analysis_exp1.qmd
+    - analysis/analysis_exp2.qmd
+    - analysis/analysis_exp3.qmd
 
 website:
   title: "Task Timing and Preference"
-  description: "Companion website for the research paper on temporal task scheduling decisions"
-  site-url: "https://pmarcowski.github.io/task-timing-preference/"
+  description: "Analysis companion for four studies of task timing and preference"
   repo-url: "https://github.com/pmarcowski/task-timing-preference"
   repo-actions: [source]
-  open-graph:
-    image: preview.png
-  twitter-card:
-    image: preview.png
+  search: true
   navbar:
-    background: dark
     title: "Task Timing & Preference"
     left:
       - text: "Home"
         href: index.qmd
-      - text: "Analyses"
+      - text: "Analysis"
         menu:
           - text: "Pilot Study"
             href: analysis/analysis_pilot.qmd
@@ -34,17 +32,29 @@ website:
     right:
       - icon: github
         href: "https://github.com/pmarcowski/task-timing-preference"
+        aria-label: "Source repository"
   page-footer:
-    center: "Copyright 2025, Przemyslaw Marcowski"
+    left: "© 2026 Przemysław Marcowski"
+    right:
+      - text: "Source"
+        href: "https://github.com/pmarcowski/task-timing-preference"
+      - text: "License"
+        href: LICENSE
 
 format:
   html:
     theme: cosmo
-    toc: true
-    toc-depth: 3
-    number-sections: true
-    code-fold: show
-    df-print: paged
+    css: styles.css
+    toc: false
+    anchor-sections: true
+    code-copy: true
+    link-external-newwindow: true
+    smooth-scroll: true
+    include-in-header:
+      text: |
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
 
 execute:
-  freeze: auto
+  freeze: true

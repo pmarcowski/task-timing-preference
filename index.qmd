@@ -1,54 +1,115 @@
 ---
 title: "Task Timing and Preference"
-subtitle: "Companion website for research on temporal task scheduling decisions"
-about:
-  template: marquee
-  links:
-    - icon: github
-      text: "Source Code"
-      href: "https://github.com/pmarcowski/task-timing-preference"
-    - icon: file-earmark-text
-      text: "Paper"
-      href: "#citation"
+subtitle: "A study companion to the paper on how temporal distance weakens the impact of task difficulty but not task appeal"
 ---
 
-## Overview
+::: {.hero}
+<p class="hero-kicker">Four studies · Bayesian analysis</p>
 
-This website accompanies a research paper investigating how individuals make decisions about task scheduling. The study examines how three key factors --- task timing, difficulty, and attractiveness --- interact to influence when people choose to perform tasks.
-
-Across three experiments, we demonstrate that people systematically adjust their scheduling preferences based on the interplay between what a task demands (easy vs. hard), how appealing it is (boring vs. interesting), and when it must be completed (now vs. later). All analyses use Bayesian statistical models to quantify these effects and their uncertainty.
-
-## Experiments
-
-| Experiment | Design | Model | Research Question | Report |
-|:-----------|:-------|:------|:------------------|:-------|
-| Pilot | Within-subjects | Bayesian paired *t*-test | Do task difficulty and interest ratings differ between experimental and survey contexts? | [View](analysis/analysis_pilot.qmd) |
-| Experiment 1 | 2 x 2 (timing x task type) | Binomial (logit) | How does task timing affect preference between easy/boring and hard/interesting tasks? | [View](analysis/analysis_exp1.qmd) |
-| Experiment 2 | 2 x 2 (difficulty x attractiveness) | Gaussian mixed | How do difficulty and attractiveness influence preferred task delay? | [View](analysis/analysis_exp2.qmd) |
-| Experiment 3 | 2 x 2 x continuous | Bernoulli mixed | How do timing, difficulty, and attractiveness jointly determine task acceptance? | [View](analysis/analysis_exp3.qmd) |
-
-## Key Findings
-
-::: {.panel-tabset}
-
-### Experiment 1
-
-![Task preference as a function of timing condition. (a) Marginal probability of choosing each task type by delay. (b) Differences in preference between task types.](output/fig1.png){fig-alt="Experiment 1 results showing task preference by timing"}
-
-### Experiment 2
-
-![Delay preferences by task difficulty and attractiveness. (a) Preferred delay across conditions. (b) Attractiveness contrast effects. (c) Difficulty contrast effects.](output/fig2.png){fig-alt="Experiment 2 results showing delay preferences"}
-
-### Experiment 3
-
-![Task acceptance across delay, difficulty, and attractiveness. (a) Acceptance curves by delay. (b) Effects of delay on preference. (c) Marginal acceptance. (d) Differences in acceptance.](output/fig3.png){fig-alt="Experiment 3 results showing task acceptance patterns"}
+This site collects the analysis reports for a pilot study and three experiments on how timing, difficulty, and attractiveness shape task preference. Each report moves from the design and sample to the model, results, interpretation, and reproducibility details.
 
 :::
 
-## Citation
+## Studies
 
-Full citation and DOI to be added upon publication.
+::: {.study-grid}
+::: {.study-card}
+<span class="study-label">Pilot study</span>
 
-## License
+### Rating calibration
 
-This project is licensed under the [MIT License](LICENSE).
+Paired Bayesian comparisons assess whether task difficulty and interest ratings differ between experimental and survey contexts.
+
+[Open the pilot report](analysis/analysis_pilot.html){.card-link}
+:::
+
+::: {.study-card}
+<span class="study-label">Experiment 1</span>
+
+### Timing and task type
+
+An aggregated binomial-logit model estimates task-type preferences under tomorrow and future timing conditions.
+
+[Open the Experiment 1 report](analysis/analysis_exp1.html){.card-link}
+:::
+
+::: {.study-card}
+<span class="study-label">Experiment 2</span>
+
+### Preferred delay
+
+A Gaussian mixed model estimates preferred delay as a function of task difficulty and attractiveness.
+
+[Open the Experiment 2 report](analysis/analysis_exp2.html){.card-link}
+:::
+
+::: {.study-card}
+<span class="study-label">Experiment 3</span>
+
+### Task acceptance
+
+A Bernoulli-logit mixed model estimates acceptance across delay, difficulty, and attractiveness conditions.
+
+[Open the Experiment 3 report](analysis/analysis_exp3.html){.card-link}
+:::
+:::
+
+## Results at a glance
+
+::: {.result-stack}
+::: {.result-panel}
+::: {.result-copy}
+### Experiment 1
+
+Estimated choice probabilities and within-timing contrasts describe how preferences between the two task types vary by timing condition.
+
+[Inspect the estimates](analysis/analysis_exp1.html#results)
+:::
+
+![Marginal task-choice probabilities and pairwise differences across tomorrow and future timing conditions.](output/fig1.png){.result-figure fig-alt="Experiment 1 marginal task-choice probabilities and pairwise differences by timing condition"}
+:::
+
+::: {.result-panel}
+::: {.result-copy}
+### Experiment 2
+
+Estimated delays and condition contrasts describe how difficulty and attractiveness relate to preferred task timing.
+
+[Inspect the estimates](analysis/analysis_exp2.html#results)
+:::
+
+![Preferred task delay and contrasts across difficulty and attractiveness conditions.](output/fig2.png){.result-figure fig-alt="Experiment 2 preferred delays and contrasts by task difficulty and attractiveness"}
+:::
+
+::: {.result-panel}
+::: {.result-copy}
+### Experiment 3
+
+Acceptance curves, marginal probabilities, contrasts, and delay slopes summarize choices across the full factorial design.
+
+[Inspect the estimates](analysis/analysis_exp3.html#results)
+:::
+
+![Task-acceptance curves, marginal probabilities, contrasts, and delay slopes across experimental conditions.](output/fig3.png){.result-figure fig-alt="Experiment 3 task-acceptance curves and estimates by delay, difficulty, and attractiveness"}
+:::
+:::
+
+## Reproducibility and data boundary
+
+::: {.boundary-grid}
+::: {.boundary-card}
+### Reproducible reports
+
+The notebooks record the prepared inputs, model specifications, posterior summaries, and software session information used to produce each report. Analysis code is available in the source repository.
+:::
+
+::: {.boundary-card}
+### Aggregate presentation
+
+The published reports present aggregate summaries and model results. They do not display participant-level rows. Prepared analysis data remain versioned with the research source.
+:::
+:::
+
+## Source and license
+
+The [source repository](https://github.com/pmarcowski/task-timing-preference) contains the notebooks, prepared data, analysis code, and figure outputs. The project is licensed under the [GNU General Public License v3.0](LICENSE).
